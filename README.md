@@ -20,4 +20,3 @@ It does not include:
 - production infrastructure
 - CI/CD
 - AI features
-- unnecessary microservices or messaging systems
