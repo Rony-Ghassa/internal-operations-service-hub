@@ -13,7 +13,7 @@ Employees may not know  where or how  to request an internal help, they may use 
 ## actors / stakeholders
 
 - employee /user: send internal requests
-- department staff:receive the request and handles them
+- department staff:receive the request and handles the requests
 - admin user: manage users, departments and  requests
 
 ## functional requirements
