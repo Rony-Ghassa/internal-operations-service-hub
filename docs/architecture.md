@@ -160,4 +160,4 @@ This architecture describes the main components, responsibilities, flows, bounda
 
 ### Architecture Diagram
 
-![Internal Operations Service Hub Architecture](architecture-diagram.png)i wa
+![Internal Operations Service Hub Architecture](architecture-diagram.png)
