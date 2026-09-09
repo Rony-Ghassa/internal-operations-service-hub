@@ -16,7 +16,19 @@ This repository contains the product specification, architecture, data model, an
 This repository focuses on the product foundation and system design.
 
 It does not include:
-- complete frontend or backend implementation
+
+- complete frontend implementation
 - production infrastructure
 - CI/CD
 - AI features
+
+## Request Status Transitions
+
+This milestone implements one bounded backend behavior: Request status transitions using NestJS and in-memory data.
+
+### Run
+
+```bash
+cd backend
+npm install
+npm run start:dev
