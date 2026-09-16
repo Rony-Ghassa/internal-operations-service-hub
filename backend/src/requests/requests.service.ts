@@ -1,22 +1,71 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ServiceRequest } from './request.entity';
 import { RequestStatus } from './request-status.enum';
-
-interface InternalRequest {
-  id: number;
-  status: RequestStatus;
-}
 
 @Injectable()
 export class RequestsService {
-  private requests: InternalRequest[] = [
-    { id: 1, status: RequestStatus.SUBMITTED },
-    { id: 2, status: RequestStatus.IN_PROGRESS },
-    { id: 3, status: RequestStatus.COMPLETED },
-    { id: 4, status: RequestStatus.CANCELLED },
-  ];
+  constructor(
+    @InjectRepository(ServiceRequest)
+    private readonly requestRepository: Repository<ServiceRequest>,
+  ) {}
 
-  updateStatus(id: number, newStatus: RequestStatus) {
-    const request = this.requests.find((request) => request.id === id);
+  private readonly requestTypeToDepartment: Record<string, string> = {
+    'Password Reset': 'IT',
+    'Leave Request': 'HR',
+    Reimbursement: 'Finance',
+  };
+
+  async createRequest(
+    userId: number,
+    requestType: string,
+    description: string,
+  ) {
+    const department = this.requestTypeToDepartment[requestType];
+
+    if (!department) {
+      throw new BadRequestException('Unsupported request type');
+    }
+
+    const request = this.requestRepository.create({
+      requestType,
+      department,
+      description,
+      status: RequestStatus.SUBMITTED,
+      createdByUserId: userId,
+    });
+
+    return this.requestRepository.save(request);
+  }
+
+  async getRequestForUser(id: number, userId: number) {
+    const request = await this.requestRepository.findOne({
+      where: { id },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Request not found');
+    }
+
+    if (request.createdByUserId !== userId) {
+      throw new ForbiddenException(
+        'You are not allowed to view this request',
+      );
+    }
+
+    return request;
+  }
+
+  async updateStatus(id: number, newStatus: RequestStatus) {
+    const request = await this.requestRepository.findOne({
+      where: { id },
+    });
 
     if (!request) {
       throw new NotFoundException('Request not found');
@@ -43,6 +92,8 @@ export class RequestsService {
 
     const previousStatus = request.status;
     request.status = newStatus;
+
+    await this.requestRepository.save(request);
 
     return {
       id: request.id,

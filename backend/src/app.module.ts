@@ -1,11 +1,17 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { RequestsModule } from './requests/requests.module';
+import { ServiceRequest } from './requests/request.entity';
 
 @Module({
-  imports: [RequestsModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'better-sqlite3',
+      database: 'service-hub.db',
+      entities: [ServiceRequest],
+      synchronize: true,
+    }),
+    RequestsModule,
+  ],
 })
 export class AppModule {}
