@@ -1,0 +1,44 @@
+#root {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+select,
+textarea,
+button {
+  padding: 10px;
+  font-size: 16px;
+}
+
+textarea {
+  min-height: 100px;
+}
+
+button {
+  cursor: pointer;
+}
+
+section {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #ccc;
+}
