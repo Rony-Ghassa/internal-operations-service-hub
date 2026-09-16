@@ -1,29 +1,55 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { RequestsModule } from '../src/requests/requests.module';
+import { ServiceRequest } from '../src/requests/request.entity';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+describe('Service Request flow (e2e)', () => {
+  let app: INestApplication;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'better-sqlite3',
+          database: ':memory:',
+          entities: [ServiceRequest],
+          synchronize: true,
+        }),
+        RequestsModule,
+      ],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleRef.createNestApplication();
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(async () => {
+    await app.close();
   });
 
-  afterEach(async () => {
-    await app.close();
+  it('creates a request and lets its owner view it', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/requests')
+      .set('x-user-id', '1')
+      .send({
+        requestType: 'Password Reset',
+        description: 'I cannot access my account.',
+      })
+      .expect(201);
+
+    expect(createResponse.body.department).toBe('IT');
+    expect(createResponse.body.status).toBe('Submitted');
+
+    const requestId = createResponse.body.id;
+
+    const viewResponse = await request(app.getHttpServer())
+      .get(`/requests/${requestId}`)
+      .set('x-user-id', '1')
+      .expect(200);
+
+    expect(viewResponse.body.id).toBe(requestId);
+    expect(viewResponse.body.createdByUserId).toBe(1);
   });
 });
