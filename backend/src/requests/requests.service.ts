@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,12 +9,21 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ServiceRequest } from './request.entity';
 import { RequestStatus } from './request-status.enum';
+import { REQUEST_CLASSIFIER } from './request-classifier';
+import type { RequestClassifier } from './request-classifier';
+import {
+  ALLOWED_REQUEST_TYPES,
+  isAllowedRequestType,
+} from './request-type.validator';
 
 @Injectable()
 export class RequestsService {
   constructor(
     @InjectRepository(ServiceRequest)
     private readonly requestRepository: Repository<ServiceRequest>,
+
+    @Inject(REQUEST_CLASSIFIER)
+    private readonly classifier: RequestClassifier,
   ) {}
 
   private readonly requestTypeToDepartment: Record<string, string> = {
@@ -42,6 +52,40 @@ export class RequestsService {
     });
 
     return this.requestRepository.save(request);
+  }
+
+  async createRequestFromText(
+    userId: number,
+    text: string,
+  ) {
+    try {
+      const suggestedType = await this.classifier.classify(
+        text,
+        ALLOWED_REQUEST_TYPES,
+      );
+
+      if (!isAllowedRequestType(suggestedType)) {
+        throw new BadRequestException(
+          'Unable to classify the request.',
+        );
+      }
+
+      return this.createRequest(
+        userId,
+        suggestedType,
+        text,
+      );
+    } catch (error) {
+      console.error('Classifier error:', error);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        'Unable to classify the request.',
+      );
+    }
   }
 
   async getRequestForUser(id: number, userId: number) {

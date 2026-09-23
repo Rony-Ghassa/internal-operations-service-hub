@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { RequestsService } from './requests.service';
 import { ServiceRequest } from './request.entity';
 import { RequestStatus } from './request-status.enum';
+import { FakeRequestClassifier } from './fake-request-classifier';
 
 describe('RequestsService', () => {
   let service: RequestsService;
@@ -15,7 +16,10 @@ describe('RequestsService', () => {
       save: jest.fn(),
     } as unknown as Repository<ServiceRequest>;
 
-    service = new RequestsService(repository);
+    service = new RequestsService(
+      repository,
+      new FakeRequestClassifier(),
+    );
   });
 
   it('rejects changing a Completed request to Cancelled', async () => {

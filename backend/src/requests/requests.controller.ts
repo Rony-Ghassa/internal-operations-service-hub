@@ -14,7 +14,16 @@ import { RequestStatus } from './request-status.enum';
 @Controller('requests')
 export class RequestsController {
   constructor(private readonly requestsService: RequestsService) {}
-
+@Post('classify-and-create')
+createFromText(
+  @Headers('x-user-id') userId: string,
+  @Body('text') text: string,
+) {
+  return this.requestsService.createRequestFromText(
+    Number(userId),
+    text,
+  );
+}
   @Post()
   createRequest(
     @Headers('x-user-id') userId: string,
