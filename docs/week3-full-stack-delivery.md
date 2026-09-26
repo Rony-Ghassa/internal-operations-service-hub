@@ -1,7 +1,11 @@
-## Verification
+# Week 3 Full-Stack Delivery
 
-### User-Facing Flow
+This document records the Week 3 full-stack implementation and verification completed for the Internal Operations Service Hub.
+
+## User-Facing Flow
+
 The React frontend allows an Employee to:
+
 - select a Request Type,
 - enter a description,
 - submit the Service Request,
@@ -9,20 +13,28 @@ The React frontend allows an Employee to:
 
 The flow was verified from the React frontend through the NestJS backend to the SQLite database.
 
-### Authorization
+## Authorization
+
 The Request creator is allowed to view their own Request.
 
 Example:
+
 - User 1 creates Request 1.
 - User 1 can view Request 1.
 
 Another Employee is denied access.
 
 Example:
-- User 2 tries to view Request 1.
-- The backend returns `403 Forbidden`.
 
-### Invalid Request
+- User 2 tries to view Request 1.
+- The Backend returns `403 Forbidden`.
+
+This Week 3 authorization rule used the `x-user-id` header to simulate Employee identity.
+
+A full authentication system was outside the Week 3 scope.
+
+## Invalid Request
+
 An unsupported Request Type is rejected.
 
 Example:
@@ -38,7 +50,8 @@ Result:
 
 `400 Bad Request`
 
-### Expected Failure
+## Expected Failure
+
 Requesting a Request that does not exist is handled without crashing.
 
 Example:
@@ -52,23 +65,30 @@ Result:
 ## Automated Tests
 
 ### Business Rule Test
-The automated unit test verifies that:
+
+The automated business rule test verifies that:
 
 `Completed -> Cancelled`
 
 is rejected.
 
-This protects the Request status behavior implemented in Week 2.
+This protects the Request status behavior introduced in Week 2.
 
 ### Database Integration Test
+
 The integration test:
+
 1. creates a Service Request using `RequestsService`,
 2. saves it using a real SQLite test database,
 3. reads it back from the database,
 4. verifies its Request Type, Department, status, and creator.
 
+The integration test verifies that the Backend and Database work together correctly rather than only testing isolated application logic.
+
 ### E2E Test
+
 The E2E test:
+
 1. sends `POST /requests`,
 2. verifies the created Request,
 3. sends `GET /requests/:id` as the creator,
@@ -82,4 +102,47 @@ The Week 2 Request status transition rule is protected by an automated test.
 
 A `Completed` Request cannot move to `Cancelled`.
 
-The full automated test suite and E2E test were run successfully after the Week 3 changes.
+This provides regression protection so later changes do not silently break the existing Request lifecycle rule.
+
+The full automated test suite and E2E test were run successfully after the Week 3 implementation.
+
+## Week 3 Scope
+
+Week 3 introduced:
+
+- React frontend,
+- NestJS and React integration,
+- real SQLite persistence,
+- Request submission,
+- Request Type to Department routing,
+- Employee ownership authorization,
+- invalid Request rejection,
+- expected failure handling,
+- automated business rule testing,
+- Backend-Database integration testing,
+- E2E testing,
+- regression protection for the Week 2 Request lifecycle.
+
+The Week 3 implementation did not include:
+
+- full authentication,
+- Department Staff Portal,
+- Employee My Requests panel,
+- Employee cancellation UI,
+- AI-assisted Request classification,
+- Admin management UI,
+- production deployment.
+
+## Later Development
+
+Later development expanded the Week 3 flow with:
+
+- Employee My Requests tracking,
+- Employee Request cancellation,
+- Department Staff Portal,
+- Department-based Staff status updates,
+- `Other -> Admin Review` manual routing,
+- AI-assisted Request Type classification using Gemini,
+- AI validation and deterministic failure handling.
+
+These later features are documented in the current project README, architecture, product specification, and Week 4 documentation.

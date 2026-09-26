@@ -2,320 +2,380 @@
 
 ## Purpose + Scope
 
-This architecture describes the main components, responsibilities, flows, boundaries, and authorization decisions needed for the Internal Operations Service Hub based on the product specification.
+This architecture describes the components, responsibilities, flows, boundaries, and authorization decisions used by the current Internal Operations Service Hub implementation.
 
-### Requirements for the Design
+The current version focuses on the Service Request workflow, Department routing, request tracking, Department Staff status updates, Employee cancellation, SQLite persistence, automated tests, and AI-assisted Request Type classification.
 
-- Employees can submit internal request
+Some parts of the wider product vision, such as full authentication and Admin management, are not implemented in the current version.
 
-- The system routes each request to the correct department based on request type
+## Requirements for the Design
 
-- Department staff can view and update requests assigned to their department.
+- Employees can submit internal Requests.
+- Employees can view and track their submitted Requests.
+- Employees can cancel their own active Requests.
+- The system routes each Request to the correct Department or review destination based on Request Type.
+- Department Staff can view Requests for a selected Department.
+- Department Staff can update the status of Requests assigned to their Department.
+- Invalid Request status transitions must be rejected.
+- Employees can submit free-text descriptions for AI-assisted Request Type classification.
+- AI-assisted classification must only return one of the Request Types allowed by the AI workflow.
+- AI failure or invalid output must not cause a Request to be saved.
+- Request ownership and Department update rules are checked by the Backend.
 
-- Employees can track the status of their requests.
+## Actors
 
-- Admin users can add, edit, and delete users, departments, and requests.
+- Employee / User: submits Requests, tracks them, and can cancel their own active Requests.
+- Department Staff: views Requests for a Department and updates Requests assigned to that Department.
+- Admin User: part of the intended wider product scope, but Admin management functionality is not implemented in the current version.
 
-- Only authorized users can view or manage requests based on their role and department.
+## System Boundaries
 
-- Employees receive an email notification when department staff updates their request status.
+### Inside the System
 
-- Employees can submit free-text request descriptions for AI-assisted Request Type classification.
-
-- AI-assisted classification must only return one of the Request Types allowed by the system.
-
-### Actors
-
-- Employee/User: submits internal requests and tracks their status.
-
-- Department Staff: receives requests assigned to their department and updates their status.
-
-- Admin User: manages users, departments, and requests.
-
-### system boundaries
-
-#### inside the system
-
-- User interface used by employees, department staff, and admins.
-
-- Request management logic.
-
-- Request routing based on request type.
-
-- Role and permission checks.
-
-- Request status management.
-
+- React Employee Portal.
+- React Department Staff Portal.
+- NestJS Application Backend.
+- Request creation and validation.
+- Request Type to Department routing.
+- Request ownership checks.
+- Department-based status update checks.
+- Request lifecycle management.
+- Employee Request cancellation.
 - AI classification validation.
+- SQLite persistence for Service Requests.
 
-- Data storage for users, departments, and requests.
+### Outside the System
 
-#### Outside the System
-
-- Employees, department staff, and admin users.
-
-- The actual work performed by IT, HR, or Finance departments.
-
+- Employees.
+- Department Staff.
+- Future Admin users.
+- The actual work performed by IT, HR, Finance, or other departments.
 - Internet connection.
-
-- Email Service used to send status update notifications.
-
-- Gemini AI Service used to suggest a Request Type from an employee's free-text request.
+- Gemini AI Service used to suggest a Request Type from an Employee's free-text request.
 
 ## Structure + Flow
 
 ### Main Components
 
-- User Interface: allows employees, department staff, and admins to interact with the system.
+- User Interface: React frontend containing the Employee Portal and Department Staff Portal.
+- Application Backend: NestJS backend that handles Request creation, routing, tracking, cancellation, status updates, authorization checks, AI validation, and persistence.
+- AI Request Classifier: sends minimal Request context to Gemini and receives a suggested Request Type.
+- Database: SQLite database that stores Service Request records.
 
-- Application Backend: handles request creation, routing, status updates, cancellations, authorization checks, AI classification validation, and persistence.
+## Component Responsibilities
 
-- AI Request Classifier: sends minimum request context to Gemini and receives a suggested Request Type.
+### User Interface
 
-- Database: stores users, departments, requests, and request statuses.
+The current React frontend:
 
-- Email Service: external dependency used to send email notifications when department staff updates a request status.
+- allows Employees to submit Requests manually,
+- allows Employees to submit Requests using AI-assisted classification,
+- allows Employees to view their previous Requests,
+- allows Employees to see Request status,
+- allows Employees to cancel active Requests,
+- allows Department Staff to view Requests for a selected Department,
+- allows Department Staff to update Request status.
 
-### Component Responsibilities
+The current frontend includes a development-only switch between the Employee Portal and Department Staff Portal.
 
-#### User Interface
+The Staff Portal currently allows the Department to be selected manually for demonstration purposes.
 
-- Allows employees to submit and track requests.
+A production version would determine the displayed portal and Department from the authenticated user's identity and role.
 
-- Allows department staff to view and update assigned requests.
+### Application Backend
 
-- Allows admins to manage users, departments, and requests.
+The NestJS Backend:
 
-#### Application Backend
+- receives and validates Request creation operations,
+- applies the Request Type to Department mapping,
+- saves Service Requests,
+- retrieves Requests created by an Employee,
+- checks Request ownership when an Employee accesses an individual Request,
+- allows Employees to cancel their own active Requests,
+- retrieves Requests by Department,
+- checks the supplied Department before allowing Staff status updates,
+- validates Request status transitions,
+- sends only the required Request text and allowed Request Types to the AI classifier,
+- validates the AI classification result before using it,
+- keeps Request Type to Department routing inside the Backend,
+- prevents the AI Service from writing directly to the Database.
 
-- Receives and validates requests.
+Current manual routing is:
 
-- Routes each request to the correct department.
+- `Password Reset -> IT`
+- `Leave Request -> HR`
+- `Reimbursement -> Finance`
+- `Other -> Admin Review`
 
-- Checks user roles and permissions.
+AI-assisted classification supports only:
 
-- Handles request status updates and cancellations.
+- Password Reset
+- Leave Request
+- Reimbursement
 
-- Reads and saves data in the Database.
+`Other` is a manual fallback and is not returned by the AI classifier.
 
-- Handles admin management operations after checking the admin role.
+### AI Request Classifier
 
-- Sends an email notification request when department staff updates a request status.
+The AI Request Classifier:
 
-- Sends only the required request text and allowed Request Types to the AI classifier.
+- receives the Employee Request text,
+- receives the list of allowed AI Request Types,
+- sends the minimum required context to Gemini,
+- receives a suggested Request Type,
+- returns the suggestion to the Application Backend.
 
-- Validates the AI classification result before using it.
+The AI classifier does not receive:
 
-- Keeps Request Type to Department routing inside the Backend.
+- Department routing mappings,
+- Employee IDs,
+- Department Staff identity,
+- authorization information,
+- Request status information,
+- Database records.
 
-- Does not allow the AI Service to write directly to the Database.
+The AI Service does not write directly to the Database.
 
-#### AI Request Classifier
+### Database
 
-- Receives the employee request text and the list of allowed Request Types.
+The current SQLite Database stores Service Request records.
 
-- Sends the minimum required context to Gemini.
+Each stored Service Request contains:
 
-- Returns a suggested Request Type to the Application Backend.
+- Request ID,
+- Request Type,
+- Department or review destination,
+- description,
+- status,
+- creator identifier.
 
-- Does not receive Department mappings, user IDs, authorization information, request status, or Database records.
+The current implementation does not have separate database tables for:
 
-- Does not write to the Database.
+- Users,
+- Departments,
+- Request Types,
+- roles,
+- Staff Department assignments.
 
-#### Database
+Request Type to Department mappings are currently owned by the Application Backend rather than stored in the Database.
 
-- Stores users and their roles.
+## Main Flow
 
-- Stores departments.
+### Standard Request Submission Flow
 
-- Stores requests and their current status.
-
-- Stores which employee created a request and which department it belongs to.
-
-- Stores the mapping between request types and their correct departments.
-
-# Main Flow
-
-### Request Submission Flow
-
-1. Employee submits an internal request through the User Interface.
-
-2. The User Interface sends the request to the Application Backend.
-
-3. The Backend checks the request information and the employee's permission.
-
-4. The Backend identifies the correct department based on the request type.
-
-5. The request is saved in the Database with its department and status.
-
-6. Department staff can then view the request assigned to their department.
+1. The Employee selects a Request Type and enters a description in the User Interface.
+2. The User Interface sends the Request to the Application Backend.
+3. The Backend validates the Request Type.
+4. The Backend finds the correct Department or review destination using its product-owned routing mapping.
+5. The Backend creates the Request with status `Submitted`.
+6. The Request is saved in SQLite.
+7. The created Request is returned to the User Interface.
+8. The Request appears in the Employee's My Requests panel.
 
 ### AI-Assisted Request Submission Flow
 
-1. Employee submits a free-text request description.
-
-2. The request is sent to the Application Backend.
-
-3. The Backend sends only the employee text and allowed Request Types to the AI Request Classifier.
-
+1. The Employee enters a free-text Request description.
+2. The User Interface sends the text to the Application Backend.
+3. The Backend sends only the Employee text and allowed Request Types to the AI Request Classifier.
 4. Gemini suggests one Request Type.
+5. The Backend validates that the returned value is one of the allowed AI Request Types.
+6. If the result is valid, the Backend applies its own Request Type to Department mapping.
+7. The Backend creates and saves the Request.
+8. The Request is returned to the User Interface.
+9. If Gemini fails or returns an invalid Request Type, the Backend returns:
 
-5. The Backend validates that the suggested Request Type is one of the allowed values.
+`Unable to classify the request.`
 
-6. If the result is valid, the Backend applies the product-owned Request Type to Department mapping.
+10. When AI classification fails, no Request is saved.
 
-7. The Backend saves the Request in the Database.
+### Employee Request Tracking Flow
 
-8. If the AI fails or returns an invalid Request Type, the Request is not saved.
+1. The Employee Portal requests the current Employee's Requests from the Backend.
+2. The current prototype supplies the Employee identity using `x-user-id`.
+3. The Backend retrieves Requests with the matching creator identifier.
+4. The Requests are returned newest first.
+5. The User Interface displays Request Type, Department, description, and status.
+6. The Employee can refresh the list to retrieve updated status information.
+
+### Department Staff Request Flow
+
+1. Department Staff opens the Staff Portal.
+2. A Department is selected in the current prototype.
+3. The User Interface requests Requests assigned to that Department.
+4. The Backend retrieves matching Requests.
+5. The Staff Portal displays the Requests.
+
+In the current prototype, Department selection is used for demonstration and is not tied to a real authenticated Staff account.
+
+A production version would derive the Department from the authenticated Staff user.
 
 ### Status Update Flow
 
-1. Department staff opens a request assigned to their department.
+1. Department Staff chooses a Request assigned to their selected Department.
+2. The User Interface sends the new status to the Application Backend.
+3. The current prototype sends the Department using the `x-department` header.
+4. The Backend loads the Request.
+5. The Backend checks that the supplied Department matches the Request's Department.
+6. The Backend validates the requested status transition.
+7. The new status is saved.
+8. The updated status is returned to the Staff Portal.
+9. When the Employee refreshes My Requests, the new status is displayed.
 
-2. Department staff updates the request status.
+Allowed Staff transitions are:
 
-3. The User Interface sends the update to the Application Backend.
+`Submitted -> In Progress`
 
-4. The Backend checks that the staff member has permission to update that request.
+`In Progress -> Completed`
 
-5. The new status is saved in the Database.
-
-6. The Backend sends a notification request to the Email Service.
-
-7. The Email Service sends an email notification to the employee.
-
-8. When the employee views the request again, the updated status is displayed.
+Other Staff transitions are rejected.
 
 ### Request Cancellation Flow
 
-1. Employee selects one of their own requests to cancel.
+1. The Employee selects one of their own active Requests.
+2. The User Interface sends a cancellation Request to the Application Backend.
+3. The current prototype identifies the Employee using `x-user-id`.
+4. The Backend loads the Request.
+5. The Backend checks that the Request belongs to that Employee.
+6. The Backend checks that the Request is not `Completed` or already `Cancelled`.
+7. The status is changed to `Cancelled`.
+8. The updated status is saved.
+9. The Employee Portal displays the cancelled status.
 
-2. The User Interface sends the cancellation request to the Application Backend.
+Allowed Employee cancellation transitions are:
 
-3. The Backend checks that the request belongs to that employee.
+`Submitted -> Cancelled`
 
-4. The Backend checks that the request is not already completed.
+`In Progress -> Cancelled`
 
-5. The request status is updated to cancelled in the Database.
+`Completed` and `Cancelled` are terminal states.
 
-6. The employee sees the updated cancelled status.
+## Trust + Resilience
 
-### Admin Management Flow
+### Current Authorization Model
 
-1. Admin selects an action to add, edit, or delete a user, department, or request.
+The current implementation demonstrates authorization rules without implementing full authentication.
 
-2. The User Interface sends the action to the Application Backend.
+Employee identity is simulated using:
 
-3. The Backend checks that the user has the Admin role.
+`x-user-id`
 
-4. The Backend performs the requested change.
+Department Staff identity is simulated using:
 
-5. The Database is updated.
+`x-department`
 
-6. The result is shown to the Admin.
+Current Backend checks include:
 
-# Trust + Resilience
+- an Employee can only retrieve an individual Request they created,
+- an Employee can only cancel their own Request,
+- a Department Staff status update is rejected if the supplied Department does not match the Request's Department,
+- invalid Request status transitions are rejected.
 
-### Authorization
+The current Department Request listing endpoint retrieves Requests using the Department provided in the request path.
 
-- The Application Backend checks the user's role before allowing access to a request.
+Because there is no full authentication system yet, the current headers and Department selection should be treated as development and demonstration mechanisms rather than production identity controls.
 
-- Employees can view their own requests and cancel them before completion.
+In a production version:
 
-- Department staff can only view and update requests assigned to their department.
-
-- Admin users can manage users, departments, and requests.
+- users would authenticate securely,
+- Employee ID would come from the authenticated identity,
+- Staff role and Department would come from the authenticated identity,
+- users would not provide their own identity or Department through request headers,
+- the correct frontend portal would be selected according to the authenticated user's role.
 
 ### AI Trust Boundary
 
-- Employee request text is treated as untrusted input.
+Employee Request text is treated as untrusted input.
 
-- The AI does not control Department routing.
+The AI:
 
-- The AI cannot write directly to the Database.
+- does not control Department routing,
+- does not receive Department routing mappings,
+- cannot write directly to the Database,
+- cannot choose arbitrary Request Types accepted by the Backend.
 
-- The AI result is validated at runtime by the Application Backend.
+The Backend validates every AI classification result at runtime.
 
-- Only allowed Request Types can be accepted.
+Only these AI Request Types can be accepted:
+
+- Password Reset
+- Leave Request
+- Reimbursement
+
+If the AI returns any other value, the Request is rejected and not saved.
 
 ### Reliability / Failure Handling
 
-- If a request cannot be saved, the system should retry once. If it still fails, the user should see an error instead of a successful submission message.
+- If Request creation fails, the User Interface displays an error rather than a successful submission message.
+- If the Backend rejects an operation, the frontend displays an error.
+- Invalid status transitions are rejected.
+- Department mismatches during Staff status updates return a forbidden response.
+- Employees cannot cancel Requests that are already `Completed` or `Cancelled`.
+- If Gemini fails or returns an invalid Request Type, the Backend returns the stable message:
 
-- The system should handle many requests at the same time without crashing.
+`Unable to classify the request.`
 
-- If the internet connection is lost, the user should be informed that the request could not be completed.
+- AI classification failure does not change the Database state.
+- The system is designed to return Request status information within the required 2-second period during normal operation.
 
-- Request status information should be returned within the 2-seconds when the system is operating normally.
+## Decisions
 
-- If the Email Service fails, the request status should still be updated and saved in the Database.
+- Use one NestJS Application Backend for the current system logic.
+- Use React for the User Interface.
+- Use SQLite for current relational persistence.
+- Keep Request Type to Department routing inside the Backend.
+- Keep Request lifecycle rules inside the Backend.
+- Keep Request ownership and Department update checks inside the Backend.
+- Use Gemini only to suggest a Request Type.
+- Validate AI output before creating a Request.
+- Do not give Gemini access to Database records.
+- Do not allow Gemini to write to the Database.
+- Keep the current implementation simple rather than adding queues, microservices, or unnecessary infrastructure.
 
-- If the AI Service fails or returns an invalid Request Type, the Backend returns the stable message `Unable to classify the request.`
+## Communication + Trust Decisions
 
-- If AI-assisted classification fails, no Request is saved and the Database state remains unchanged.
-
-# Decisions
-
-- Use one Application Backend to handle the main system logic.
-
-- Keep request routing inside the Backend.
-
-- Keep authorization checks inside the Backend.
-
-- Use one Database to keep users, departments, requests, and request statuses.
-
-- Use an external Email Service to send notifications when department staff updates request statuses.
-
-- Use Gemini only to suggest a Request Type from the product's allowed Request Types.
-
-- Keep AI result validation inside the Application Backend.
-
-- Keep Department routing and Database writes controlled by the Application Backend.
-
-# Communication + Trust Decisions
-
-- Communication between the User Interface and Application Backend is synchronous because users need an immediate response.
-
-- Communication between the Application Backend and Database is synchronous for the current request flows.
-
-- Communication between the Application Backend and Gemini is synchronous because the Backend needs the classification before deciding whether the Request can be saved.
-
-- Authorization checks are performed by the Application Backend and not trusted to the User Interface.
-
+- Communication between the User Interface and Application Backend is synchronous because users need immediate responses.
+- Communication between the Application Backend and SQLite Database is synchronous for the current Request flows.
+- Communication between the Application Backend and Gemini is synchronous because the Backend needs the classification before deciding whether a Request can be created.
+- Request Type to Department routing is controlled by the Application Backend.
+- Request status transitions are controlled by the Application Backend.
+- Request ownership checks are controlled by the Application Backend.
 - Only the Application Backend communicates directly with the Database.
+- Gemini does not communicate directly with the Database.
+- The overall business process is asynchronous because an Employee may submit a Request and Department Staff may process it later.
 
-- The AI Service does not communicate directly with the Database.
+## Current Implementation Limitations
 
-- The overall request handling process is asynchronous because an employee can submit a request and the department staff may handle and update it later.
+The current version does not include:
 
-- Sending the email notification should not block the request status update.
+- full authentication,
+- JWT login,
+- persistent User accounts,
+- persistent Staff roles,
+- persistent Staff Department assignments,
+- separate Department database entities,
+- separate Request Type database entities,
+- Admin management UI,
+- Admin CRUD operations,
+- production infrastructure.
 
-# Traceability
+These can be added in a future production version without changing the core Service Request workflow.
 
-- Employees can submit requests -> User Interface + Application Backend + Database
+## Traceability
 
-- Requests must be routed to the correct department -> Application Backend.
+- Employees can submit Requests -> React Employee Portal + NestJS Backend + SQLite.
+- Employees can track Requests -> My Requests panel + Backend + SQLite.
+- Employees can cancel their own active Requests -> Backend ownership and lifecycle checks.
+- Requests must be routed correctly -> Backend Request Type to Department mapping.
+- Department Staff can view Department Requests -> Staff Portal + Department Request endpoint.
+- Department Staff can update Request status -> Staff Portal + Backend Department check + lifecycle validation.
+- Wrong Department status updates must be rejected -> Backend Department validation.
+- Invalid status transitions must be rejected -> Backend lifecycle rules.
+- Employees can submit free-text Requests for AI-assisted classification -> Backend + AI Request Classifier + Gemini.
+- AI output must use an allowed Request Type -> Backend runtime validation.
+- Request Type to Department routing remains product-owned -> Backend.
+- AI failure must not change stored data -> Backend validates classification before saving.
+- Full authentication and Admin management remain future production improvements.
 
-- Admin can manage users, departments, and requests -> User Interface + Backend authorization + Database.
-
-- Department staff can update request status -> User Interface + Application Backend + Database.
-
-- Employees can track request status -> User Interface + Application Backend + Database.
-
-- Only authorized users can access requests -> Application Backend authorization checks.
-
-- Employees can cancel their own request before completion -> Application Backend checks ownership and request status.
-
-- Employees receive an email when department staff updates their request status -> Application Backend + Email Service.
-
-- Employees can submit free-text requests for AI-assisted classification -> Application Backend + AI Request Classifier + Gemini AI Service.
-
-- AI output must use an allowed Request Type -> Application Backend runtime validation.
-
-- Request Type to Department routing remains product-owned -> Application Backend.
-
-- AI failure must not change stored data -> Application Backend validates before saving to the Database.
-
-### Architecture Diagram
+## Architecture Diagram
 
 ![Internal Operations Service Hub Architecture](architecture-diagram.png)
