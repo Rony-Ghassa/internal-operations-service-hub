@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
 
 type ServiceRequest = {
   id: number;
@@ -29,7 +32,7 @@ function StaffView() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/requests/department/${encodeURIComponent(
+        `${API_URL}/requests/department/${encodeURIComponent(
           department,
         )}`,
       );
@@ -64,14 +67,15 @@ function StaffView() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/requests/${requestId}/status`,
+        `${API_URL}/requests/${requestId}/status`,
         {
           method: 'PATCH',
 
           headers: {
-            'Content-Type': 'application/json',
-
-            'x-department': department,
+            'Content-Type':
+              'application/json',
+            'x-department':
+              department,
           },
 
           body: JSON.stringify({
@@ -80,7 +84,8 @@ function StaffView() {
         },
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -89,18 +94,24 @@ function StaffView() {
         );
       }
 
-      setRequests((currentRequests) =>
-        currentRequests.map((request) =>
-          request.id === requestId
-            ? {
-                ...request,
-                status: data.newStatus,
-              }
-            : request,
-        ),
+      setRequests(
+        (currentRequests) =>
+          currentRequests.map(
+            (request) =>
+              request.id ===
+              requestId
+                ? {
+                    ...request,
+                    status:
+                      data.newStatus,
+                  }
+                : request,
+          ),
       );
     } catch (error) {
-      if (error instanceof Error) {
+      if (
+        error instanceof Error
+      ) {
         setError(error.message);
       } else {
         setError(
@@ -119,11 +130,13 @@ function StaffView() {
               Department Staff Portal
             </p>
 
-            <h1>Service Requests</h1>
+            <h1>
+              Service Requests
+            </h1>
 
             <p>
-              View and manage requests assigned
-              to your department.
+              View and manage requests
+              assigned to your department.
             </p>
           </div>
 
@@ -164,103 +177,121 @@ function StaffView() {
         )}
 
         {loading ? (
-          <p>Loading requests...</p>
-        ) : requests.length === 0 ? (
+          <p>
+            Loading requests...
+          </p>
+        ) : requests.length ===
+          0 ? (
           <div className="empty-state">
             <h2>No requests</h2>
 
             <p>
-              There are currently no requests
-              assigned to {department}.
+              There are currently no
+              requests assigned to{' '}
+              {department}.
             </p>
           </div>
         ) : (
           <div className="staff-request-list">
-            {requests.map((request) => (
-              <article
-                className="staff-request-card"
-                key={request.id}
-              >
-                <div className="staff-request-top">
-                  <div>
-                    <span className="request-type">
-                      {request.requestType}
-                    </span>
+            {requests.map(
+              (request) => (
+                <article
+                  className="staff-request-card"
+                  key={request.id}
+                >
+                  <div className="staff-request-top">
+                    <div>
+                      <span className="request-type">
+                        {
+                          request.requestType
+                        }
+                      </span>
 
-                    <h2>
-                      {request.description}
-                    </h2>
+                      <h2>
+                        {
+                          request.description
+                        }
+                      </h2>
+                    </div>
+
+                    <span className="status-badge">
+                      {request.status}
+                    </span>
                   </div>
 
-                  <span className="status-badge">
-                    {request.status}
-                  </span>
-                </div>
+                  <div className="staff-request-details">
+                    <div>
+                      <span>
+                        Department
+                      </span>
 
-                <div className="staff-request-details">
-                  <div>
-                    <span>Department</span>
+                      <strong>
+                        {
+                          request.department
+                        }
+                      </strong>
+                    </div>
 
-                    <strong>
-                      {request.department}
-                    </strong>
+                    <div>
+                      <span>
+                        Employee
+                      </span>
+
+                      <strong>
+                        Employee #
+                        {
+                          request.createdByUserId
+                        }
+                      </strong>
+                    </div>
                   </div>
 
-                  <div>
-                    <span>Employee</span>
+                  <div className="staff-actions">
+                    {request.status ===
+                      'Submitted' && (
+                      <button
+                        onClick={() =>
+                          updateStatus(
+                            request.id,
+                            'In Progress',
+                          )
+                        }
+                      >
+                        Start Request
+                      </button>
+                    )}
 
-                    <strong>
-                      Employee #
-                      {request.createdByUserId}
-                    </strong>
+                    {request.status ===
+                      'In Progress' && (
+                      <button
+                        onClick={() =>
+                          updateStatus(
+                            request.id,
+                            'Completed',
+                          )
+                        }
+                      >
+                        Mark Completed
+                      </button>
+                    )}
+
+                    {request.status ===
+                      'Completed' && (
+                      <span className="completed-text">
+                        Request completed
+                      </span>
+                    )}
+
+                    {request.status ===
+                      'Cancelled' && (
+                      <span className="completed-text">
+                        Request cancelled
+                      </span>
+                    )}
                   </div>
-                </div>
-
-                <div className="staff-actions">
-                  {request.status ===
-                    'Submitted' && (
-                    <button
-                      onClick={() =>
-                        updateStatus(
-                          request.id,
-                          'In Progress',
-                        )
-                      }
-                    >
-                      Start Request
-                    </button>
-                  )}
-
-                  {request.status ===
-                    'In Progress' && (
-                    <button
-                      onClick={() =>
-                        updateStatus(
-                          request.id,
-                          'Completed',
-                        )
-                      }
-                    >
-                      Mark Completed
-                    </button>
-                  )}
-
-                  {request.status ===
-                    'Completed' && (
-                    <span className="completed-text">
-                      Request completed
-                    </span>
-                  )}
-
-                  {request.status ===
-                    'Cancelled' && (
-                    <span className="completed-text">
-                      Request cancelled
-                    </span>
-                  )}
-                </div>
-              </article>
-            ))}
+                </article>
+              ),
+            )}
           </div>
         )}
       </div>

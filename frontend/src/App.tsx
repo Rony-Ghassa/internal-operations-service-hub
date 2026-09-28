@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useState,
@@ -7,7 +6,9 @@ import {
 import './App.css';
 import StaffView from './StaffView';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
 
 type CreatedRequest = {
   id: number;
@@ -148,7 +149,7 @@ function App() {
       try {
         const response =
           await fetch(
-            'http://localhost:3000/requests/my',
+            `${API_URL}/requests/my`,
             {
               headers: {
                 'x-user-id': '1',
@@ -197,7 +198,7 @@ function App() {
     try {
       const response =
         await fetch(
-          'http://localhost:3000/requests',
+          `${API_URL}/requests`,
           {
             method: 'POST',
 
@@ -250,7 +251,7 @@ function App() {
       try {
         const response =
           await fetch(
-            'http://localhost:3000/requests/classify-and-create',
+            `${API_URL}/requests/classify-and-create`,
             {
               method: 'POST',
 
@@ -310,7 +311,7 @@ function App() {
       try {
         const response =
           await fetch(
-            `http://localhost:3000/requests/${requestId}/cancel`,
+            `${API_URL}/requests/${requestId}/cancel`,
             {
               method: 'PATCH',
 
