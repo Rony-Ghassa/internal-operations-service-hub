@@ -1,3 +1,4 @@
+
 import {
   useEffect,
   useState,
@@ -5,6 +6,8 @@ import {
 
 import './App.css';
 import StaffView from './StaffView';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 type CreatedRequest = {
   id: number;
