@@ -1,22 +1,42 @@
+import { jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 
 describe('AppController', () => {
   let appController: AppController;
 
   beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
-      providers: [AppService],
-    }).compile();
+    const app: TestingModule =
+      await Test.createTestingModule({
+        controllers: [AppController],
 
-    appController = app.get<AppController>(AppController);
+        providers: [
+          {
+            provide: DataSource,
+            useValue: {
+              query: jest
+                .fn()
+                .mockResolvedValue([{ result: 1 }]),
+            },
+          },
+        ],
+      }).compile();
+
+    appController =
+      app.get<AppController>(
+        AppController,
+      );
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('health', () => {
+    it('returns healthy status when the database is reachable', async () => {
+      await expect(
+        appController.getHealth(),
+      ).resolves.toEqual({
+        status: 'ok',
+        database: 'connected',
+      });
     });
   });
 });
