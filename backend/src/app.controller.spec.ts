@@ -1,5 +1,15 @@
-import { jest } from '@jest/globals';
-import { Test, TestingModule } from '@nestjs/testing';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from '@jest/globals';
+
+import {
+  Test,
+  TestingModule,
+} from '@nestjs/testing';
+
 import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 
@@ -9,15 +19,17 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule =
       await Test.createTestingModule({
-        controllers: [AppController],
+        controllers: [
+          AppController,
+        ],
 
         providers: [
           {
             provide: DataSource,
             useValue: {
-              query: jest
-                .fn()
-                .mockResolvedValue([{ result: 1 }]),
+              query: async () => [
+                { result: 1 },
+              ],
             },
           },
         ],

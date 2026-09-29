@@ -1,4 +1,11 @@
-import { jest } from '@jest/globals';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
+
 import {
   BadRequestException,
 } from '@nestjs/common';
@@ -12,6 +19,7 @@ import { FakeRequestClassifier } from './fake-request-classifier';
 
 describe('RequestsService', () => {
   let service: RequestsService;
+
   let repository:
     Repository<ServiceRequest>;
 
