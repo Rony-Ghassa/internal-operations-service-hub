@@ -517,3 +517,12 @@ Future production work may include:
 - moving from local SQLite to a production database,
 - deployment configuration,
 - monitoring and operational logging.
+
+## Demo Access
+
+The current prototype does not require a login.
+
+- **Employee Portal:** uses simulated Employee #1 identity.
+- **Staff Portal:** click `Staff Portal` and select IT, HR, Finance, or Admin Review.
+
+Authentication is simulated for the current prototype using request headers. Full account authentication and JWT-based identity are outside the current implementation scope.
